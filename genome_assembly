@@ -1,0 +1,72 @@
+# 1) Long read quality control
+
+./fastqc *fastq.gz fastqc_output/
+
+# 2) Run Supernova
+
+supernova run \--id=SFS_longreadassembly \--fastqs=/home/jesse/vol1/NQA6UAY/WIL14931.20201014/201007_E00389_0476_AHF2MTCCX2/working/supernova-2.1.1/SFS_fastq \--maxreads='all'
+
+# 3) Make fasta (style raw) from supernova run
+
+nohup supernova mkoutput \
+        --style=raw \
+        --asmdir=SFS_longreadassembly/outs/assembly \
+        --outprefix=SFS_longreadassembly/fasta_raw & 
+        [ --minsize=N ] \
+        [ --headers=short|full ]
+
+# 4) Short read quality control
+
+./fastqc *fastq.gz fastqc_output/
+
+# 5) Concatenate short reads across lanes and re run fastqc
+
+nohup cat SFS_CC1_S14_L*_R1_001.fastq.gz > SFS_CC1_R1.fastq.gz & 
+nohup cat SFS_CC1_S14_L*_R2_001.fastq.gz > SFS_CC1_R2.fastq.gz &
+
+# 6) Trim using trimmomatic
+nohup java -jar /home/jesse/vol1/NQA6UAY/WIL14931.20201014/201007_E00389_0476_AHF2MTCCX2/working/Trimmomatic-0.39/trimmomatic-0.39.jar PE SFS_CC1_R1.fastq.gz SFS_CC1_R2.fastq.gz SFS_CC1_R1_Trimmed.fastq.gz SFS_CC1_R1_Unpaired.fastq.gz SFS_CC1_R2_Trimmed.fastq.gz SFS_CC1_R2_Unpaired.fastq.gz ILLUMINACLIP:/home/jesse/vol1/NQA6UAY/WIL14931.20201014/201007_E00389_0476_AHF2MTCCX2/working/Trimmomatic-0.39/adapters/TruSeq3-PE-2.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 &
+
+# 7) Contamination classification with kraken2 - run for each short-read pair separately and make sure to generate reports -> generate custom bacteria only db ***output is fastq NOT fastq.gz
+
+#Kraken db build
+kraken2-build --download-taxonomy --db bacteriaDB
+kraken2-build --download-library bacteria --db bacteriaDB
+nohup kraken2-build --build --db bacteriaDB &
+
+# kraken classification
+nohup /home/ubuntu/volume_genome/NLDN8JR/WIL14931/200929_E00389_0474_AHCF7VCCX2/working/kraken2-2.1.1/kraken2_dir/kraken2 --gzip-compressed --db /home/ubuntu/volume_genome/NLDN8JR/WIL14931/200929_E00389_0474_AHCF7VCCX2/working/kraken2-2.1.1/kraken2_dir/bacteriaDB --paired --unclassified-out NFS_50254_unclass#.fastq.gz SFS_CC1_R1_Trimmed.fastq.gz SFS_CC1_R2_Trimmed.fastq.gz --report SFS_CC1Report --use-names &
+
+# Count number of reads after trimming and contamination screening
+cat file.fastq | paste - - - - | cut -f2 | wc -c > file_* (* = 1 or 2 depending on forward/reverse)
+
+# 8) kmer genie
+nohup ./kmergenie list_file & 
+# Need to re-run with higher K 
+nohup ./kmergenie -k 200 list_file & 
+
+# 9) meraculous installation +assembly 
+# Dependencies = cmake >= 2.8, GCC g++ >= 4.4.7, GNU make 3.81, Boost C++ library >= 1.50.0, Perl (>= 5.10), Log4perl.pm (>= 1.31), gnuplot (>= 3.7)
+
+# 9) Start run
+# Archive saves files from previous stages under /old
+# Step runs one stage at a time
+# Cleanup level 1 - "Delete files that are not used in any of the subsequent stages and that are generally not informative to the user. You will still be able to rerun any stage individually."
+
+# 9.1) Import step - runs on 2 cores with 4GB of RAM
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -dir meraculous_16core_Jan13 &
+
+# 9.2) Mercount step - takes ~23 hours on 16 core with 64 GB RAM
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_mercount -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+# 9.3) Mergraph stage - takes ~30 hours on 16 cores with 64GB RAM
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_mergraph -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+# 9.4) UFX stage - runs on 2 cores with 4GB of RAM
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_ufx -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+# 9.5) Contigs stage - takes ~3 hours on 32 cores with 256GB of RAM
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_contigs -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+# 9.6) bubble
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_bubble -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
