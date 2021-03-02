@@ -45,13 +45,10 @@ nohup ./kmergenie list_file &
 # Need to re-run with higher K 
 nohup ./kmergenie -k 200 list_file & 
 
-# 9) meraculous installation +assembly 
+# 9) meraculous installation +assembly ########### DID NOT END UP USING FOR MS ###############
 # Dependencies = cmake >= 2.8, GCC g++ >= 4.4.7, GNU make 3.81, Boost C++ library >= 1.50.0, Perl (>= 5.10), Log4perl.pm (>= 1.31), gnuplot (>= 3.7)
 
 # 9) Start run
-# Archive saves files from previous stages under /old
-# Step runs one stage at a time
-# Cleanup level 1 - "Delete files that are not used in any of the subsequent stages and that are generally not informative to the user. You will still be able to rerun any stage individually."
 
 # 9.1) Import step - runs on 2 cores with 4GB of RAM
 nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -dir meraculous_16core_Jan13 &
@@ -70,3 +67,34 @@ nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meracul
 
 # 9.6) bubble
 nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_bubble -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+# crashed part way as exceeded 16 core 64GB of RAM @ bubblemap stage, took another hour with 126GB RAM -> had to change bubble_depth_threshold to 1 in meraculous.config2
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -step -cleanup_level 1 -resume -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+9.7) merblast - 27.5 hours on 16 cores with 128GB ram (could have went to 64GB)
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_merblast -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+9.8) ono
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_ono -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+#crashed after running for a few hours on the 24/7 - resume on 16 core 64GB, took ~4 hours
+
+9.9) gap_closure 
+# crashed twice - once at 64gb and once after 4.5 hrs on 128gb
+# took 6.5 hours with 32 cores and 256 GB
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -step -cleanup_level 1 -resume -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+9.10) meraculous_final_results
+# crashed on 2 cores 4GB, took 15 min with 32gb and 16 cores
+nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_final_results -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
+
+
+#10) BUSCO on long read asssembly
+# took 13 hours with 8 cores 16gb ram
+export BUSCO_CONFIG_FILE=./config/config.ini
+export PATH=$PATH:/usr/bin/augustus
+export AUGUSTUS_CONFIG_PATH=//home/ubuntu/vol1/busco/augustus-3.3.2/config
+nohup scripts/run_BUSCO.py -i ./fasta_pseudohap.fasta -o fasta_pseudohap_BUSCO -l mammalia_odb9 -m geno -f -sp human -c 2 &
+
+#11) Repeat Masker
+
+
+#12) Annotation with AUGUSTUS
