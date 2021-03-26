@@ -11,7 +11,7 @@ supernova run \--id=SFS_longreadassembly \--fastqs=/home/jesse/vol1/NQA6UAY/WIL1
 nohup supernova mkoutput \
         --style=raw \
         --asmdir=SFS_longreadassembly/outs/assembly \
-        --outprefix=SFS_longreadassembly/fasta_raw & 
+        --outprefix=SFS_longreadassembly/fasta_pseudohap & 
         [ --minsize=N ] \
         [ --headers=short|full ]
 
@@ -40,61 +40,42 @@ nohup /home/ubuntu/volume_genome/NLDN8JR/WIL14931/200929_E00389_0474_AHCF7VCCX2/
 # Count number of reads after trimming and contamination screening
 cat file.fastq | paste - - - - | cut -f2 | wc -c > file_* (* = 1 or 2 depending on forward/reverse)
 
-# 8) kmer genie
-nohup ./kmergenie list_file & 
-# Need to re-run with higher K 
-nohup ./kmergenie -k 200 list_file & 
-
-# 9) meraculous installation +assembly ########### DID NOT END UP USING FOR MS ###############
-# Dependencies = cmake >= 2.8, GCC g++ >= 4.4.7, GNU make 3.81, Boost C++ library >= 1.50.0, Perl (>= 5.10), Log4perl.pm (>= 1.31), gnuplot (>= 3.7)
-
-# 9) Start run
-
-# 9.1) Import step - runs on 2 cores with 4GB of RAM
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -dir meraculous_16core_Jan13 &
-
-# 9.2) Mercount step - takes ~23 hours on 16 core with 64 GB RAM
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_mercount -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-# 9.3) Mergraph stage - takes ~30 hours on 16 cores with 64GB RAM
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_mergraph -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-# 9.4) UFX stage - runs on 2 cores with 4GB of RAM
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_ufx -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-# 9.5) Contigs stage - takes ~3 hours on 32 cores with 256GB of RAM
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_contigs -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-# 9.6) bubble
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_bubble -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-# crashed part way as exceeded 16 core 64GB of RAM @ bubblemap stage, took another hour with 126GB RAM -> had to change bubble_depth_threshold to 1 in meraculous.config2
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -step -cleanup_level 1 -resume -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-9.7) merblast - 27.5 hours on 16 cores with 128GB ram (could have went to 64GB)
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_merblast -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-9.8) ono
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_ono -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-#crashed after running for a few hours on the 24/7 - resume on 16 core 64GB, took ~4 hours
-
-9.9) gap_closure 
-# crashed twice - once at 64gb and once after 4.5 hrs on 128gb
-# took 6.5 hours with 32 cores and 256 GB
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -step -cleanup_level 1 -resume -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
-9.10) meraculous_final_results
-# crashed on 2 cores 4GB, took 15 min with 32gb and 16 cores
-nohup bash /home/ubuntu/Meraculous-v2.2.6/build/bin/run_meraculous.sh -c meraculous.config2 -archive -step -cleanup_level 1 -start meraculous_final_results -restart -dir /home/ubuntu/vol1/meraculous_16core_Jan13 &
-
 
 #10) BUSCO on long read asssembly
-# took 13 hours with 8 cores 16gb ram
-export BUSCO_CONFIG_FILE=./config/config.ini
-export PATH=$PATH:/usr/bin/augustus
-export AUGUSTUS_CONFIG_PATH=//home/ubuntu/vol1/busco/augustus-3.3.2/config
 nohup scripts/run_BUSCO.py -i ./fasta_pseudohap.fasta -o fasta_pseudohap_BUSCO -l mammalia_odb9 -m geno -f -sp human -c 2 &
 
 #11) Repeat Masker
+nohup ./RepeatMasker -e ncbi -pa 32 /home/ubuntu/vol1/fasta_files/fasta_pseudohap.fasta -species glaucomys > fasta_pseudohap.fasta.masked &
 
+#12a) Annotation with AUGUSTUS without RNA-seq
+nohup scripts/bin/augustus --species=human --gff3=on ./fasta_pseudohap.fasta.masked > human_annotation.gff &
 
-#12) Annotation with AUGUSTUS
+#12b) Annotation with AUGUSTUS with RNA-seq
+# Use blat to align transcriptome and masked genome
+nohup ./blat -noHead -stepSize=5 -minIdentity=93 /home/ubuntu/vol1/fasta_files/fasta_pseudohap.fasta.masked /home/ubuntu/vol1/transcriptome/Glaucomys_Trinity.fasta ali.psl &
+
+#Then filter alignments for alignment quality, uniqueness and pairedness, if applicable.
+cat ali.psl | scripts/filterPSL.pl --uniq > ali.f.psl &
+
+#Sort alignments by target sequence and within target sequence by position for further processing (fs = filtered and sorted)
+cat ali.f.psl | sort -n -k 16,16 | sort -s -k 14,14 > ali.fs.psl
+
+#We currently generate two types of hints from the RNA-Seq alignments, exonpart and intron hints. Intron hints are more important but can currently not be generated by all NGS mapping programs: Most of them perform no spliced alignment.
+#Intron hints
+nohup scripts/blat2hints.pl --intronsonly --in=ali.fs.psl --out=hints.introns.gff &
+
+#Each exonpart hint specifies an interval that is likely to be exonic. We take the local coverage depth into account. For the purpose of exonpart hint generation and visualization we first summarize the alignments to a coverage depth function in wiggle format. Wiggle format (.wig) is a format of the UCSC Genome Browser.
+nohup /home/ubuntu/vol1/busco/augustus-3.3.2/auxprogs/aln2wig/aln2wig -f ali.fs.psl > cov.wig &
+
+#Now generate the exonpart hints with
+cat cov.wig | scripts/wig2hints.pl --width=10 --margin=10 --minthresh=2 --minscore=4 --prune=0.1 --src=W --type=ep --UCSC=unstranded.track --radius=4.5 --pri=4 --strand="." > hints.ep.gff
+
+#Concatenate all hints:
+cat hints.introns.gff hints.ep.gff > hints.gff &
+
+#Split fasta into 16 files for parallel annotation 
+nohup ./fasta-splitter.pl --n-parts 32 --part-size 1932 --measure count /home/ubuntu/vol1/fasta_files/fasta_pseudohap_masked.fa --nopad --line-length 100 --out-dir out_32parts &
+
+#Run AUGUSTUS with the hints (part 1 as example)
+scripts/bin/augustus --species=human --UTR=on --extrinsicCfgFile=config/extrinsic/extrinsic.M.RM.E.W.P.cfg --alternatives-from-evidence=true --hintsfile=hints.gff --allow_hinted_splicesites=atac ./fasta_pseudohap_masked.part-1.fa > human_annotation_hints_part1.gff &
+
