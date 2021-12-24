@@ -19,7 +19,7 @@ nohup supernova mkoutput \
 
 ./fastqc *fastq.gz fastqc_output/
 
-# 5) Concatenate short reads across lanes and re run fastqc
+# 5) Concatenate short reads across lanes and re-run fastqc
 
 nohup cat SFS_CC1_S14_L*_R1_001.fastq.gz > SFS_CC1_R1.fastq.gz & 
 nohup cat SFS_CC1_S14_L*_R2_001.fastq.gz > SFS_CC1_R2.fastq.gz &
