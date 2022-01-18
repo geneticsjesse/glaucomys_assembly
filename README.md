@@ -1,11 +1,18 @@
-# A <em> de novo <em> genome assembly and annotation of the southern flying squirrel (Glaucomys volans) (Wolf et al. 2021)
-### This repository the raw data and R scripts used to perform analyses and generate figures for my manuscript published in Ecology and Evolution. Detailed below are the steps this script walks you through, starting with raw data, data manipulation/filtering, running statistical models, and generating figures.
+# A <em> de novo </em> genome assembly and annotation of the southern flying squirrel (<em> Glaucomys volans</em>) (Wolf et al. 2021)
+### This repository a bash script used to generate a <em> de novo </em> genome assembly for southern flying squirrels that was published in G3 Genes|Genomes|Genetics. Detailed below are the steps this script walks you through, starting with raw sequence data.
 
-If you are interested in the manuscript, see https://doi.org/10.1002/ece3.8106
+If you are interested in the manuscript, see https://doi.org/10.1093/g3journal/jkab373
 
-1. Read in raw data in .csv format
-1. Reducing dataset to relevant variables
-1. Ensuring all relevant data columns are recognized as factors 
-1. Create a series of models, building up from null model to full model by adding one term at a time
-1. Run final Generalized Linear Model 
-1. Generate figures and combine them using the patchwork package in R
+1. Run FastQC on raw long linked reads
+1. Run the Supernova genome assembler on the long linked reads (https://support.10xgenomics.com/de-novo-assembly/software/overview/latest/welcome)
+1. Create the fasta file from the assembly file (#### Note: I chose the raw output style but there are multiple options)
+1. Run FastQC on raw short reads
+1. Concatenate short reads across lanes and re-run fastqc (#### Note: The short reads were used as an extension of the paper mentioned above as I re-sequenced the short-read pairs
+using the <em> de novo </em> assembly and generated some comparative analyses)
+1. Trim the concatenated short reads using trimmomatic (http://www.usadellab.org/cms/?page=trimmomatic) (#### Note: There are various customizable paramaters here and will require specific input based on individual data)
+1. Create a kraken database from which to screen reads for contaminants (http://ccb.jhu.edu/software/kraken/)
+1. Check for contaminant reads using Kraken database
+1. Count number of reads after trimming and contamination screening
+1. Run BUSCO to assess genome completedness (https://busco.ezlab.org/)
+1. Generate a repeat-masked version of the genome using RepeatMasker (https://www.repeatmasker.org/)
+1. Annotate the genome using AUGUSTUS (https://bioinf.uni-greifswald.de/augustus/) both with and without hints. I generated hints using a transcriptome that was previously generated for flying squirrels
