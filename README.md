@@ -5,14 +5,10 @@ If you are interested in the manuscript, see https://doi.org/10.1093/g3journal/j
 
 1. Run FastQC on raw long linked reads
 1. Run the Supernova genome assembler on the long linked reads (https://support.10xgenomics.com/de-novo-assembly/software/overview/latest/welcome)
-1. Create the fasta file from the assembly file
-#### Note: I chose the raw output style but there are multiple options)
+1. Create the fasta file from the assembly file (<b> Note: I chose the raw output style but there are multiple options </b>)
 3. Run FastQC on raw short reads
-4. Concatenate short reads across lanes and re-run fastqc
-#### Note: The short reads were used as an extension of the paper mentioned above as I re-sequenced the short-read pairs
-using the <em> de novo </em> assembly and generated some comparative analyses)
-1. Trim the concatenated short reads using trimmomatic (http://www.usadellab.org/cms/?page=trimmomatic) 
-#### Note: There are various customizable paramaters here and will require specific input based on individual data)
+4. Concatenate short reads across lanes and re-run fastqc (<b> Note: The short reads were used as an extension of the paper mentioned above as I re-sequenced the short-read pairs using the <em> de novo </em> assembly and generated some comparative analyses </b>)
+1. Trim the concatenated short reads using trimmomatic (http://www.usadellab.org/cms/?page=trimmomatic) (<b> Note: There are various customizable paramaters here and will require specific input based on individual data </b>)
 3. Create a kraken database from which to screen reads for contaminants (http://ccb.jhu.edu/software/kraken/)
 4. Check for contaminant reads using Kraken database
 5. Count number of reads after trimming and contamination screening
