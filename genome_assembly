@@ -36,20 +36,20 @@ nohup kraken2-build --build --db bacteriaDB &
 
 # kraken classification
 nohup /kraken2_dir/kraken2 --gzip-compressed --db /kraken2-2.1.1/kraken2_dir/bacteriaDB --paired --unclassified-out NFS_50254_unclass#.fastq.gz SFS_CC1_R1_Trimmed.fastq.gz SFS_CC1_R2_Trimmed.fastq.gz --report SFS_CC1Report --use-names &
-
+1
 # Count number of reads after trimming and contamination screening
 cat file.fastq | paste - - - - | cut -f2 | wc -c > file_* (* = 1 or 2 depending on forward/reverse)
 
-#10) BUSCO on long read asssembly
+8) BUSCO on long read asssembly
 nohup scripts/run_BUSCO.py -i ./fasta_pseudohap.fasta -o fasta_pseudohap_BUSCO -l mammalia_odb9 -m geno -f -sp human -c 2 &
 
-#11) Repeat Masker
+#9) Repeat Masker
 nohup ./RepeatMasker -e ncbi -pa 32 /home/ubuntu/vol1/fasta_files/fasta_pseudohap.fasta -species glaucomys > fasta_pseudohap.fasta.masked &
 
-#12a) Annotation with AUGUSTUS without RNA-seq
+#10a) Annotation with AUGUSTUS without RNA-seq
 nohup scripts/bin/augustus --species=human --gff3=on ./fasta_pseudohap.fasta.masked > human_annotation.gff &
 
-#12b) Annotation with AUGUSTUS with RNA-seq
+#10b) Annotation with AUGUSTUS with RNA-seq
 # Use blat to align transcriptome and masked genome
 nohup ./blat -noHead -stepSize=5 -minIdentity=93 /home/ubuntu/vol1/fasta_files/fasta_pseudohap.fasta.masked /home/ubuntu/vol1/transcriptome/Glaucomys_Trinity.fasta ali.psl &
 
